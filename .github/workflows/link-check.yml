@@ -1,0 +1,51 @@
+name: Link Check
+
+# Not on pull_request: external links rate-limit and flake, and a host having a
+# bad afternoon must not block a PR. A weekly sweep of the built site catches
+# stale outbound links instead. The extension pages are generated at build time,
+# so this checks the built HTML rather than the (gitignored) sources.
+on:
+  schedule:
+    # Mondays, 07:00 UTC, after the weekly docs rebuild.
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    name: Check links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set node LTS
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build site
+        run: pnpm run build
+
+      - name: Check links in the built site
+        uses: lycheeverse/lychee-action@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: >-
+            --no-progress
+            --max-retries 3
+            --retry-wait-time 10
+            --timeout 30
+            --accept 200,204,206
+            --root-dir ${{ github.workspace }}/dist
+            './dist/**/*.html'
+          fail: true

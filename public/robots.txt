@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://spicetify.yusufaf.dev/sitemap-index.xml
