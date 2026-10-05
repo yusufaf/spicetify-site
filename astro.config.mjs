@@ -17,6 +17,7 @@ export default defineConfig({
             description:
                 'Docs for a set of Spicetify extensions that add album lengths, folder and pin management, listening lists, local-file tags and RateYourMusic ratings to the Spotify desktop client.',
             favicon: '/favicon.svg',
+            logo: { alt: '', src: './src/assets/logo.svg' },
             plugins: [
                 // `baseUrl` is deliberately omitted: setting it makes this plugin
                 // emit its own URL-list llms.txt, which would collide with the
