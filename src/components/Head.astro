@@ -2,16 +2,27 @@
 import Default from '@astrojs/starlight/components/Head.astro'
 import { EXTENSIONS, SITE } from '../data/extensions.mjs'
 
+// Generated extension pages may set their own og:image in frontmatter `head`
+// (scripts/sync-extensions.mjs); every other page gets the site-wide image.
 const ogImage = `${SITE}/og.png`
+const hasOwnOgImage = Astro.locals.starlightRoute.head.some(
+    ({ attrs, tag }) => tag === 'meta' && attrs?.property === 'og:image',
+)
 const isHomePage = Astro.url.pathname === '/'
 ---
 
 <Default><slot /></Default>
 <link href="/llms.txt" rel="alternate" type="text/plain" title="llms.txt" />
-<meta property="og:image" content={ogImage} />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
-<meta name="twitter:image" content={ogImage} />
+{
+    !hasOwnOgImage && (
+        <>
+            <meta property="og:image" content={ogImage} />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+            <meta name="twitter:image" content={ogImage} />
+        </>
+    )
+}
 {
     isHomePage && (
         <script

@@ -7,9 +7,12 @@ These extensions run inside the Spotify desktop client through [Spicetify](https
 
 ## Install an extension from Marketplace
 
-1. Install [Spicetify Marketplace](https://github.com/spicetify/marketplace) if you haven't already.
-2. Open Marketplace in Spotify, go to the **Extensions** tab and search for the extension's name.
-3. Click **Install**. Spotify reloads with the extension active.
+1. Install the [Spicetify Marketplace](https://spicetify.app/docs/customization/marketplace) custom app if you haven't already.
+2. In Spotify, open **Marketplace** (the shopping-cart icon at the top left) and stay on the **Extensions** tab.
+3. Search for the extension's name. If it doesn't show up, click **Load more** (» at the bottom of the list) until it does. Marketplace loads extensions in batches and only searches the ones it has loaded.
+4. Hover the card, click its download button, then click **Reload now**.
+
+Once every batch has loaded, searching `yusufaf` lists all of these extensions at once.
 
 Marketplace finds extensions by their GitHub repository topic (`spicetify-extensions`) and shows each extension's README as its page.
 

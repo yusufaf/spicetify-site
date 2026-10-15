@@ -12,6 +12,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { EXTENSIONS, GITHUB_OWNER } from '../src/data/extensions.mjs'
+import { imageSize, ogImageHead } from '../src/lib/ogImage.mjs'
 import { transformReadme } from '../src/lib/transformReadme.mjs'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -39,6 +40,18 @@ function absolutize(repo, file) {
     return /^https?:\/\//.test(file) ? file : rawUrl(repo, file.replace(/^\.?\//, ''))
 }
 
+// Dimensions decide whether a preview is big enough to be the page's og:image. A
+// preview that can't be fetched only costs the page its social image, not the build.
+async function fetchImageSize(url) {
+    if (!url) return null
+    try {
+        const res = await fetch(url)
+        return res.ok ? imageSize(new Uint8Array(await res.arrayBuffer())) : null
+    } catch {
+        return null
+    }
+}
+
 async function syncExtension({ repo, slug, order }) {
     const [manifestText, readme, changelog, releaseManifestText] = await Promise.all([
         fetchText(rawUrl(repo, 'manifest.json')),
@@ -52,6 +65,8 @@ async function syncExtension({ repo, slug, order }) {
     const manifest = Array.isArray(parsed) ? parsed[0] : parsed
     const version = releaseManifestText ? (JSON.parse(releaseManifestText)['.'] ?? null) : null
     const editUrl = `https://github.com/${GITHUB_OWNER}/${repo}/edit/HEAD/README.md`
+    const preview = absolutize(repo, manifest.preview)
+    const head = ogImageHead(preview, await fetchImageSize(preview))
 
     const outDir = path.join(DOCS_DIR, slug)
     await rm(outDir, { force: true, recursive: true })
@@ -62,6 +77,7 @@ async function syncExtension({ repo, slug, order }) {
         frontmatter({
             description: manifest.description,
             editUrl,
+            head,
             sidebar: { label: 'Overview', order: 0 },
             title: manifest.name,
         }) + transformReadme(readme, { repo }),
@@ -73,6 +89,7 @@ async function syncExtension({ repo, slug, order }) {
             frontmatter({
                 description: `Release history for ${manifest.name}.`,
                 editUrl: false,
+                head,
                 sidebar: { label: 'Changelog', order: 1 },
                 title: `${manifest.name} changelog`,
             }) + transformReadme(changelog, { repo }),
@@ -83,7 +100,7 @@ async function syncExtension({ repo, slug, order }) {
         description: manifest.description,
         name: manifest.name,
         order,
-        preview: absolutize(repo, manifest.preview),
+        preview,
         repo,
         repoUrl: `https://github.com/${GITHUB_OWNER}/${repo}`,
         slug,
