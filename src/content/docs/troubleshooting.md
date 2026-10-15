@@ -19,6 +19,8 @@ If it still doesn't load, confirm the file is listed in your config:
 spicetify config extensions
 ```
 
+Extensions installed from Marketplace aren't listed there, because Marketplace loads them itself. Check that they appear on Marketplace's **Installed** tab instead.
+
 ## Read the console output
 
 Each extension prefixes its console messages with its name, for example `[Album Length]`.
