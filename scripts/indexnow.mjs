@@ -18,7 +18,6 @@
 import { createHash } from 'node:crypto'
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 export const MANIFEST = 'indexnow-pages.json'
 const REQUEST = 'indexnow-request.json'
@@ -37,15 +36,23 @@ export function pageFile({ distDir, url }) {
     return path.join(distDir, pathname.endsWith('/') ? `${pathname}index.html` : pathname)
 }
 
-// Only the page's own content: the sidebar, head and asset fingerprints are on
-// every page, and hashing them would mark the whole site changed on any edit.
+// Only what a search engine shows for this page: its title, description,
+// robots and canonical tags, and its <main> content. The sidebar is on every
+// page, and build fingerprints (/_astro/ asset names, astro-xxxx scoped
+// classes) change with any Astro or theme upgrade; hashing either would mark
+// the whole site changed.
 export function pageContent(html) {
-    return html.match(/<main[\s>][\s\S]*<\/main>/)?.[0] ?? html
+    const head = html.match(/<title>[\s\S]*?<\/title>|<meta name="(description|robots)"[^>]*>|<link rel="canonical"[^>]*>/g) ?? []
+    const main = html.match(/<main[\s>][\s\S]*<\/main>/)?.[0] ?? html
+    return [...head, main].join('\n').replace(/\/_astro\/[^"'\s)]+/g, '').replace(/\bastro-[a-z0-9]{8}\b/g, '')
 }
 
 export function changedUrls({ current, previous }) {
     const changed = Object.keys(current).filter((url) => current[url] !== previous[url])
-    const removed = Object.keys(previous).filter((url) => !(url in current))
+    // A request may only name URLs on its own host, so drop any left over from
+    // a different domain.
+    const host = new URL(Object.keys(current)[0] ?? 'http://invalid').host
+    const removed = Object.keys(previous).filter((url) => !(url in current) && new URL(url).host === host)
     return [...changed, ...removed]
 }
 
@@ -101,9 +108,9 @@ async function plan(distDir) {
 }
 
 // A crawl hint must never block a docs deploy: on any failure, warn and
-// submit nothing. The next deploy compares against the older live manifest,
-// so these pages are picked up then.
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// submit nothing. This deploy then ships no manifest, so the next one submits
+// every page.
+if (import.meta.main) {
     const [distDir] = process.argv.slice(2)
     try {
         if (!distDir) throw new Error('usage: node scripts/indexnow.mjs <distDir>')

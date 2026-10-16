@@ -39,6 +39,14 @@ describe('pageContent', () => {
         expect(pageContent(page('same', 'text'))).not.toBe(pageContent(page('same', 'edited')))
     })
 
+    it('ignores build fingerprints but not head tags a search engine shows', () => {
+        const page = ({ asset, cls, title }) =>
+            `<title>${title}</title><main class="${cls}"><link href="/_astro/${asset}.css">Text</main>`
+        const base = { asset: 'ec.a1b2c', cls: 'astro-abcd1234', title: 'Rym' }
+        expect(pageContent(page(base))).toBe(pageContent(page({ ...base, asset: 'ec.z9y8x', cls: 'astro-zzzz9999' })))
+        expect(pageContent(page(base))).not.toBe(pageContent(page({ ...base, title: 'RYM for Spotify' })))
+    })
+
     it('falls back to the whole page without a <main>', () => {
         expect(pageContent('<body>hi</body>')).toBe('<body>hi</body>')
     })
@@ -46,12 +54,18 @@ describe('pageContent', () => {
 
 describe('changedUrls', () => {
     it('lists changed, new and removed pages, not unchanged ones', () => {
-        const previous = { '/same': 'a', '/edited': 'b', '/removed': 'c' }
-        const current = { '/same': 'a', '/edited': 'B', '/new': 'd' }
-        expect(changedUrls({ current, previous })).toEqual(['/edited', '/new', '/removed'])
+        const previous = { 'https://s.dev/same': 'a', 'https://s.dev/edited': 'b', 'https://s.dev/removed': 'c' }
+        const current = { 'https://s.dev/same': 'a', 'https://s.dev/edited': 'B', 'https://s.dev/new': 'd' }
+        expect(changedUrls({ current, previous })).toEqual(['https://s.dev/edited', 'https://s.dev/new', 'https://s.dev/removed'])
+    })
+
+    it('drops removed URLs from another host, which would void the request', () => {
+        const current = { 'https://spicetify.yusufaf.dev/': 'a' }
+        const previous = { 'https://spicetify.yusufaf.dev/': 'a', 'https://old.example/gone/': 'b' }
+        expect(changedUrls({ current, previous })).toEqual([])
     })
 
     it('lists every page when nothing was deployed before', () => {
-        expect(changedUrls({ current: { '/a': '1', '/b': '2' }, previous: {} })).toEqual(['/a', '/b'])
+        expect(changedUrls({ current: { 'https://s.dev/a': '1', 'https://s.dev/b': '2' }, previous: {} })).toEqual(['https://s.dev/a', 'https://s.dev/b'])
     })
 })
