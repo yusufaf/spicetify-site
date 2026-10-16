@@ -3,13 +3,17 @@
 // changed, so they recrawl them soon instead of whenever they next read the
 // sitemap. Google ignores it.
 //
-// Runs after `astro build`. It hashes every page in the sitemap, writes the
-// hashes to dist/indexnow-pages.json, and compares them with the copy the live
-// site still serves. The changed URLs go to indexnow-request.json, which the
-// workflow POSTs once the new build is deployed. The live copy records what
-// was last deployed, so this needs no Actions cache, which expires after a week.
+// Runs after `astro build`. It hashes the <main> content of every page in the
+// sitemap, writes the hashes to dist/indexnow-pages.json, and compares them
+// with the copy the live site still serves. Changed, new and removed URLs go to
+// indexnow-request.json, which the workflow POSTs once the new build is
+// deployed. The live copy records what was last deployed, so this needs no
+// Actions cache, which expires after a week.
 //
-// Usage: node scripts/indexnow.mjs <distDir> <siteUrl> <key>
+// The host comes from the sitemap and the key from the one <key>.txt in
+// public/, so neither can drift from what the site actually serves.
+//
+// Usage: node scripts/indexnow.mjs <distDir>
 
 import { createHash } from 'node:crypto'
 import { readdir, readFile, writeFile } from 'node:fs/promises'
@@ -17,18 +21,32 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const MANIFEST = 'indexnow-pages.json'
+const REQUEST = 'indexnow-request.json'
+const KEY_FILE = /^([a-f0-9]{32})\.txt$/
+
+const XML_ENTITIES = { amp: '&', apos: "'", gt: '>', lt: '<', quot: '"' }
 
 export function sitemapUrls(xml) {
-    return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, loc]) => loc)
+    return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, loc]) =>
+        loc.trim().replace(/&(amp|apos|gt|lt|quot);/g, (_, name) => XML_ENTITIES[name]),
+    )
 }
 
-export function pageFile(distDir, url) {
+export function pageFile({ distDir, url }) {
     const pathname = decodeURIComponent(new URL(url).pathname)
     return path.join(distDir, pathname.endsWith('/') ? `${pathname}index.html` : pathname)
 }
 
-export function changedUrls(current, previous) {
-    return Object.keys(current).filter((url) => current[url] !== previous[url])
+// Only the page's own content: the sidebar, head and asset fingerprints are on
+// every page, and hashing them would mark the whole site changed on any edit.
+export function pageContent(html) {
+    return html.match(/<main[\s>][\s\S]*<\/main>/)?.[0] ?? html
+}
+
+export function changedUrls({ current, previous }) {
+    const changed = Object.keys(current).filter((url) => current[url] !== previous[url])
+    const removed = Object.keys(previous).filter((url) => !(url in current))
+    return [...changed, ...removed]
 }
 
 async function hashPages(distDir) {
@@ -36,37 +54,62 @@ async function hashPages(distDir) {
     const pages = {}
     for (const sitemap of sitemaps) {
         for (const url of sitemapUrls(await readFile(path.join(distDir, sitemap), 'utf8'))) {
-            const html = await readFile(pageFile(distDir, url))
-            pages[url] = createHash('sha256').update(html).digest('hex')
+            const html = await readFile(pageFile({ distDir, url }), 'utf8')
+            pages[url] = createHash('sha256').update(pageContent(html)).digest('hex')
         }
     }
     return pages
 }
 
+async function findKey(distDir) {
+    const keys = (await readdir(distDir)).map((name) => name.match(KEY_FILE)?.[1]).filter(Boolean)
+    if (keys.length !== 1) throw new Error(`expected one IndexNow key file in ${distDir}, found ${keys.length}`)
+    return keys[0]
+}
+
 // A missing or unreadable live copy means every page is submitted, which is
-// harmless; failing here would block the docs deploy over a crawl hint.
-async function livePages(siteUrl) {
+// harmless. The query string skips the Pages CDN's ten-minute cache.
+async function livePages(origin) {
+    const url = new URL(`${MANIFEST}?t=${Date.now()}`, origin)
     try {
-        const response = await fetch(new URL(MANIFEST, siteUrl))
-        if (response.ok) return await response.json()
-        if (response.status !== 404) console.warn(`${MANIFEST}: HTTP ${response.status}, submitting every page`)
+        const response = await fetch(url, { signal: AbortSignal.timeout(10_000) })
+        if (response.ok) {
+            const pages = await response.json()
+            if (pages && typeof pages === 'object' && !Array.isArray(pages)) return pages
+            console.warn(`${MANIFEST}: not an object, submitting every page`)
+        } else if (response.status !== 404) {
+            console.warn(`${MANIFEST}: HTTP ${response.status}, submitting every page`)
+        }
     } catch (error) {
         console.warn(`${MANIFEST}: ${error.message}, submitting every page`)
     }
     return {}
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    const [distDir, siteUrl, key] = process.argv.slice(2)
-    if (!distDir || !siteUrl || !key) {
-        throw new Error('usage: node scripts/indexnow.mjs <distDir> <siteUrl> <key>')
-    }
-
+async function plan(distDir) {
     const pages = await hashPages(distDir)
-    if (Object.keys(pages).length === 0) throw new Error(`no sitemap pages found in ${distDir}`)
-    await writeFile(path.join(distDir, MANIFEST), JSON.stringify(pages))
+    const urls = Object.keys(pages)
+    if (urls.length === 0) throw new Error(`no sitemap pages found in ${distDir}`)
+    const { host, origin } = new URL(urls[0])
+    const key = await findKey(distDir)
 
-    const urlList = changedUrls(pages, await livePages(siteUrl))
-    await writeFile('indexnow-request.json', JSON.stringify({ host: new URL(siteUrl).host, key, urlList }))
-    console.log(`IndexNow: ${urlList.length} of ${Object.keys(pages).length} pages changed`)
+    const urlList = changedUrls({ current: pages, previous: await livePages(origin) })
+    await writeFile(REQUEST, JSON.stringify({ host, key, urlList }))
+    // Last, so a failure above leaves no manifest and the next deploy submits everything.
+    await writeFile(path.join(distDir, MANIFEST), JSON.stringify(pages))
+    console.log(`IndexNow: ${urlList.length} URLs to submit (${urls.length} pages)`)
+}
+
+// A crawl hint must never block a docs deploy: on any failure, warn and
+// submit nothing. The next deploy compares against the older live manifest,
+// so these pages are picked up then.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+    const [distDir] = process.argv.slice(2)
+    try {
+        if (!distDir) throw new Error('usage: node scripts/indexnow.mjs <distDir>')
+        await plan(distDir)
+    } catch (error) {
+        console.log(`::warning title=IndexNow::${error.message}`)
+        await writeFile(REQUEST, JSON.stringify({ urlList: [] }))
+    }
 }
