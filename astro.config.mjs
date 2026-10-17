@@ -54,6 +54,7 @@ export default defineConfig({
                     promote: ['getting-started', 'troubleshooting'],
                 }),
             ],
+            routeMiddleware: './src/routeData.ts',
             sidebar: [
                 {
                     items: [

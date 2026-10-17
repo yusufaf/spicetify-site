@@ -8,7 +8,7 @@
 // A missing manifest or README fails the build on purpose: shipping a site with
 // a silently empty extension page is worse than a red deploy.
 
-import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { EXTENSIONS, GITHUB_OWNER, GUIDES_DIR } from '../src/data/extensions.mjs'
@@ -108,10 +108,18 @@ async function syncExtension({ repo, slug, order }) {
     }
 }
 
-// syncExtension deletes and rewrites src/content/docs/<slug>/, which would wipe
-// the hand-written guides.
-const clash = EXTENSIONS.find(({ slug }) => slug === GUIDES_DIR)
-if (clash) throw new Error(`Extension ${clash.repo} uses the reserved slug '${GUIDES_DIR}'`)
+// syncExtension deletes and rewrites src/content/docs/<slug>/. A slug matching
+// the guides folder would wipe the hand-written guides, and one matching a
+// top-level page (getting-started.md, …) would collide with its URL. Compared
+// case-insensitively, because Windows and macOS file systems are.
+const reserved = new Set([
+    GUIDES_DIR,
+    ...(await readdir(DOCS_DIR, { withFileTypes: true }))
+        .filter((entry) => entry.isFile())
+        .map((entry) => entry.name.replace(/\.mdx?$/, '')),
+].map((name) => name.toLowerCase()))
+const clash = EXTENSIONS.find(({ slug }) => reserved.has(slug.toLowerCase()))
+if (clash) throw new Error(`Extension ${clash.repo} uses the reserved slug '${clash.slug}'`)
 
 const results = await Promise.allSettled(EXTENSIONS.map(syncExtension))
 const failures = results
