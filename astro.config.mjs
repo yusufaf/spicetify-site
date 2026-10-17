@@ -3,7 +3,7 @@ import starlight from '@astrojs/starlight'
 import { defineConfig } from 'astro/config'
 import starlightLlmsTxt from 'starlight-llms-txt'
 import starlightPageActions from 'starlight-page-actions'
-import { EXTENSIONS, SITE } from './src/data/extensions.mjs'
+import { EXTENSIONS, GUIDES_DIR, SITE } from './src/data/extensions.mjs'
 
 export default defineConfig({
     base: '/',
@@ -54,6 +54,7 @@ export default defineConfig({
                     promote: ['getting-started', 'troubleshooting'],
                 }),
             ],
+            routeMiddleware: './src/routeData.ts',
             sidebar: [
                 {
                     items: [
@@ -63,12 +64,18 @@ export default defineConfig({
                     label: 'Getting started',
                 },
                 {
-                    items: [{ autogenerate: { directory: 'guides' } }],
+                    items: [{ autogenerate: { directory: GUIDES_DIR } }],
                     label: 'Guides',
                 },
-                ...EXTENSIONS.map(({ label, slug }) => ({
+                // Each extension's generated Overview and Changelog, then any guides
+                // about it. A guide also appears under Guides above; it is the same
+                // page, so its URL stays under /guides/.
+                ...EXTENSIONS.map(({ guides = [], label, slug }) => ({
                     collapsed: true,
-                    items: [{ autogenerate: { directory: slug } }],
+                    items: [
+                        { autogenerate: { directory: slug } },
+                        ...guides.map((guide) => ({ badge: 'Guide', slug: `${GUIDES_DIR}/${guide}` })),
+                    ],
                     label,
                 })),
                 {
