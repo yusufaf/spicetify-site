@@ -56,6 +56,13 @@ fresh clone. `src/data/extensions.generated.json` is gitignored.
 Add an entry to `EXTENSIONS` in `src/data/extensions.mjs` (`slug` becomes the URL path), and
 add `notify-docs.yml` to the extension repo so its changes trigger a rebuild.
 
+## Adding a guide
+
+Write it as `src/content/docs/guides/<name>.md`; it appears under **Guides** in the sidebar.
+To also list it in an extension's sidebar group, add `<name>` to that extension's `guides`
+array in `src/data/extensions.mjs`. The URL stays `/guides/<name>/` either way, and
+`tests/extensions.test.mjs` fails if a listed guide doesn't exist.
+
 ## License
 
 MIT
