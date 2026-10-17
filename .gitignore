@@ -10,3 +10,6 @@ src/data/extensions.generated.json
 
 # Written by scripts/indexnow.mjs after a build
 indexnow-request.json
+
+# Hand-written guides live under docs/ too, unlike the generated extension pages
+!src/content/docs/guides/

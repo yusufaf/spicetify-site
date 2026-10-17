@@ -62,6 +62,10 @@ export default defineConfig({
                     ],
                     label: 'Getting started',
                 },
+                {
+                    items: [{ autogenerate: { directory: 'guides' } }],
+                    label: 'Guides',
+                },
                 ...EXTENSIONS.map(({ label, slug }) => ({
                     collapsed: true,
                     items: [{ autogenerate: { directory: slug } }],
