@@ -15,7 +15,13 @@ export const EXTENSIONS = [
         slug: 'enhanced-pins',
     },
     { label: 'Listening List', order: 4, repo: 'spicetify-listening-list', slug: 'listening-list' },
-    { label: 'Local Files+', order: 5, repo: 'spicetify-local-files-plus', slug: 'local-files-plus' },
+    {
+        guides: ['local-files-bitrate-genre-year-spotify'],
+        label: 'Local Files+',
+        order: 5,
+        repo: 'spicetify-local-files-plus',
+        slug: 'local-files-plus',
+    },
     { label: 'RateYourMusic Integration', order: 6, repo: 'spicetify-rym', slug: 'rym' },
 ]
 
