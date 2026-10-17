@@ -7,19 +7,18 @@ Spotify lets you pin up to 20 items at the top of Your Library. To pin more than
 
 ## What Spotify's own pins do
 
-Since July 8, 2026, Spotify lets every Free and Premium account pin up to **20** playlists, albums, artists, podcasts or audiobooks to the top of Your Library ([Spotify's announcement](https://x.com/Spotify/status/2074839915687203258)). It was 4 before that.
+Since July 8, 2026, Spotify lets you pin up to **20** favorites to the top of Your Library, on Free and Premium ([Spotify's announcement](https://x.com/Spotify/status/2074839915687203258), [Thurrott](https://www.thurrott.com/music-videos/338595/spotify-now-lets-users-pin-more-than-4-items-in-their-libraries)). It was 4 before that.
 
-Native pins have real advantages: they sync across your phone, desktop and the web player, and they need nothing installed. **If 20 pins is enough for you and you use Spotify on more than one device, use Spotify's own pins.**
+Native pins need nothing installed, and because they're part of Your Library they follow your account to the phone app and the web player too. **If 20 pins is enough for you, use Spotify's own pins.**
 
-They stop short in a few ways:
+Where they stop short:
 
 - There's a hard cap of 20.
 - Pinned items stay inside the library list, in the same scrolling column as everything else.
-- They have one order, the one you drag them into. There's no sorting by name, type or date pinned.
 
 ## What Enhanced Pins adds
 
-![The Enhanced Pins section at the top of the Spotify sidebar, showing six of ten pinned playlists and albums](https://raw.githubusercontent.com/yusufaf/spicetify-enhanced-pins/main/preview.png)
+![The Enhanced Pins section at the top of the Spotify sidebar, showing six of ten pinned playlists and albums](https://raw.githubusercontent.com/yusufaf/spicetify-enhanced-pins/HEAD/preview.png)
 
 Enhanced Pins adds a separate section at the top of the desktop app's left sidebar:
 
@@ -30,7 +29,7 @@ Enhanced Pins adds a separate section at the top of the desktop app's left sideb
 - **Icons:** mark pins with a preset icon or any emoji.
 - **Backup:** export your pins and settings to a JSON file and import them on another computer.
 
-It also keeps Spotify's right-click actions on each pin: Play, Shuffle, Add to Queue, Start a Jam, Download and the rest.
+Each pin has its own right-click menu with Play, Shuffle Play, Add to Queue, Start a Jam, radio, Download, and editing for playlists you own (Liked Songs, Your Episodes and Local Files get a shorter set). It's a shorter menu than Spotify's: for anything else, such as adding to a folder, open the item first.
 
 ## Set it up
 
@@ -57,7 +56,7 @@ Right-click any playlist, album, podcast or audiobook in Spotify, or Liked Songs
 Click the gear icon in the section header to open the settings:
 
 - **Sort by:** Custom keeps the order you drag pins into, and is the only mode where dragging works. Alphabetical, Type and Recently pinned sort for you.
-- **Max visible pins:** set it to, say, 8 to show the first eight, with the rest behind a "12 more" style button. The default, 0, shows them all.
+- **Max visible pins:** show only the first few pins. With 20 pins and this set to 8, the other twelve sit behind a "12 more" button. The default, 0, shows them all, and no button appears while you have no more pins than the limit.
 - **Hide pinned items from library list:** on by default, so a pinned playlist doesn't also appear further down.
 
 ### 5. Back them up
@@ -68,7 +67,7 @@ Enhanced Pins stores your pins on this computer only, so they don't sync to your
 
 - **Desktop only.** Spicetify modifies the Windows, macOS and Linux desktop app. Enhanced Pins doesn't appear on your phone or in the web player, where Spotify's own pins still apply.
 - **Spotify updates.** An update can undo Spicetify's changes. Run `spicetify backup apply` to restore them; see [Troubleshooting](/troubleshooting/) if something stays broken.
-- **Both kinds of pin can coexist.** Items you pin with Spotify's own Pin stay where they are. You can also add an enhanced pin to Spotify's own pins from its right-click menu (**Pin playlist**, the label for every type).
+- **Mixing both kinds of pin.** Spotify's own pins keep working, and an enhanced pin's right-click menu has **Pin playlist** (the label for every type) to add it to them too, while you're under Spotify's 20. Liked Songs, Your Episodes and Local Files don't offer it. While **Hide pinned items from library list** is on, an item that's in both places shows only in the Enhanced Pins section, because the setting also hides its row among Spotify's pins.
 
 ## Remove it
 
