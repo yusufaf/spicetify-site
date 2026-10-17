@@ -12,6 +12,7 @@ import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { EXTENSIONS, GITHUB_OWNER, GUIDES_DIR } from '../src/data/extensions.mjs'
+import { checkSlugs } from '../src/lib/checkSlugs.mjs'
 import { imageSize, ogImageHead } from '../src/lib/ogImage.mjs'
 import { transformReadme } from '../src/lib/transformReadme.mjs'
 
@@ -108,18 +109,15 @@ async function syncExtension({ repo, slug, order }) {
     }
 }
 
-// syncExtension deletes and rewrites src/content/docs/<slug>/. A slug matching
-// the guides folder would wipe the hand-written guides, and one matching a
-// top-level page (getting-started.md, …) would collide with its URL. Compared
-// case-insensitively, because Windows and macOS file systems are.
-const reserved = new Set([
-    GUIDES_DIR,
-    ...(await readdir(DOCS_DIR, { withFileTypes: true }))
+// syncExtension deletes and rewrites src/content/docs/<slug>/; see checkSlugs.
+const slugProblems = checkSlugs({
+    extensions: EXTENSIONS,
+    guidesDir: GUIDES_DIR,
+    topLevelPages: (await readdir(DOCS_DIR, { withFileTypes: true }))
         .filter((entry) => entry.isFile())
-        .map((entry) => entry.name.replace(/\.mdx?$/, '')),
-].map((name) => name.toLowerCase()))
-const clash = EXTENSIONS.find(({ slug }) => reserved.has(slug.toLowerCase()))
-if (clash) throw new Error(`Extension ${clash.repo} uses the reserved slug '${clash.slug}'`)
+        .map((entry) => entry.name),
+})
+if (slugProblems.length > 0) throw new Error(`Bad extension slugs:\n${slugProblems.join('\n')}`)
 
 const results = await Promise.allSettled(EXTENSIONS.map(syncExtension))
 const failures = results
