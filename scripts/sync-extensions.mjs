@@ -11,7 +11,7 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { EXTENSIONS, GITHUB_OWNER } from '../src/data/extensions.mjs'
+import { EXTENSIONS, GITHUB_OWNER, GUIDES_DIR } from '../src/data/extensions.mjs'
 import { imageSize, ogImageHead } from '../src/lib/ogImage.mjs'
 import { transformReadme } from '../src/lib/transformReadme.mjs'
 
@@ -107,6 +107,11 @@ async function syncExtension({ repo, slug, order }) {
         version,
     }
 }
+
+// syncExtension deletes and rewrites src/content/docs/<slug>/, which would wipe
+// the hand-written guides.
+const clash = EXTENSIONS.find(({ slug }) => slug === GUIDES_DIR)
+if (clash) throw new Error(`Extension ${clash.repo} uses the reserved slug '${GUIDES_DIR}'`)
 
 const results = await Promise.allSettled(EXTENSIONS.map(syncExtension))
 const failures = results
