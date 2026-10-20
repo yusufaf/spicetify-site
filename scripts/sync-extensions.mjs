@@ -64,7 +64,9 @@ async function syncExtension({ repo, slug, order }) {
     // Marketplace allows an array manifest; these repos each hold exactly one entry.
     const parsed = JSON.parse(manifestText)
     const manifest = Array.isArray(parsed) ? parsed[0] : parsed
-    const version = releaseManifestText ? (JSON.parse(releaseManifestText)['.'] ?? null) : null
+    // A repo bootstrapped at 0.0.0 hasn't cut its first release yet, so it gets no version badge.
+    const released = releaseManifestText ? (JSON.parse(releaseManifestText)['.'] ?? null) : null
+    const version = released === '0.0.0' ? null : released
     const editUrl = `https://github.com/${GITHUB_OWNER}/${repo}/edit/HEAD/README.md`
     const preview = absolutize(repo, manifest.preview)
     const head = ogImageHead(preview, await fetchImageSize(preview))
